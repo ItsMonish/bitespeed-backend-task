@@ -5,12 +5,10 @@ import identifyUser from "../services/identifyUser";
 const identityRouter = Router();
 
 async function identityHandler(req: Request, res: Response) {
-    console.log("[ii] Hit /identity with POST");
     let reqInput: identifyInput = {
         email: req.body?.email ?? "",
         phone: req.body?.phone ?? ""
     };
-    console.log("[ii] Body from request " + reqInput);
 
     let retResponse = await identifyUser(reqInput);
 
@@ -18,7 +16,6 @@ async function identityHandler(req: Request, res: Response) {
 }
 
 function showHelp(_: Request, res: Response) {
-    console.log("[ii] Hit /identity with GET");
     res.send("You have to use POST method for this");
 }
 

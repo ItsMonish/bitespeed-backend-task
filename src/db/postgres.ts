@@ -1,6 +1,10 @@
 import { Pool } from 'pg';
 
-const pool = new Pool();
+const databaseURL = process.env.DATABASE_URL;
+
+const pool = new Pool({
+    connectionString: databaseURL,
+});
 
 async function execute(query: string, params : (string | number | null)[]) {
     return await pool.query(query, params);

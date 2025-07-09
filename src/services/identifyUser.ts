@@ -4,14 +4,19 @@ import identifyResponse from "../types/identifyResponse";
 
 async function identifyUser(reqInput: identifyInput): Promise<identifyResponse> {
 
-    let records = await execute("SELECT * FROM Contact WHERE phoneNumber=? OR email=?", [reqInput.email, reqInput.phone]);
+    let records = await execute(
+        "SELECT COUNT(*), MIN(id) as minid, MIN(linkedid) as minlinked FROM Contact WHERE phoneNumber=$1 OR email=$2", 
+        [
+            reqInput.phone, 
+            reqInput.email
+        ]
+    );
+    let res = await execute("SELECT MAX(id) FROM Contact", []);
 
-    if (records.rowCount == 0) {
-
-        let res = await execute("SELECT MAX(Id) FROM Contact", []);
+    if (records.rows[0].count == 0) {
 
         await execute(
-            "INSERT INTO Contact (phoneNumber, email, linkedId, linkedPrecedence) VALUES(?,?,?,?,?)",
+            "INSERT INTO Contact (phoneNumber, email, linkedId, linkprecedence) VALUES($1,$2,$3,$4)",
             [
                 reqInput.phone,
                 reqInput.email,
@@ -22,7 +27,7 @@ async function identifyUser(reqInput: identifyInput): Promise<identifyResponse> 
 
         let resObj: identifyResponse = {
             contact: {
-                primaryContactId: res.rows[0][0] + 1,
+                primaryContactId: res.rows[0].max + 1,
                 emails: [reqInput.email],
                 phoneNumbers: [reqInput.phone],
                 secondaryContactIds: []
@@ -33,34 +38,74 @@ async function identifyUser(reqInput: identifyInput): Promise<identifyResponse> 
 
     } else {
 
+        let recordsByEmail = await execute("SELECT * FROM Contact WHERE email=$1", [reqInput.email]);
+        let recordsByNumber = await execute("SELECT * FROM Contact WHERE phoneNumber=$1", [reqInput.phone]);
+
         let resObj: identifyResponse = {
             contact: {
-                primaryContactId: records.rows[0][0],
+                primaryContactId: Math.min(records.rows[0].minid, records.rows[0].minlinked ?? records.rows[0].minid),
                 emails: [],
                 phoneNumbers: [],
                 secondaryContactIds: []
             }
         };
 
-        records.rows.forEach(row => {
 
-            if (row[7] != null) {
+        if (
+            (reqInput.email != "" && recordsByEmail.rowCount == 0) ||
+            (reqInput.phone != "" && recordsByNumber.rowCount == 0)
+        ) {
+            await execute(
+                "INSERT INTO Contact (phoneNumber, email, linkedId, linkprecedence) VALUES($1,$2,$3,$4)",
+                [
+                    reqInput.phone,
+                    reqInput.email,
+                    Math.min(recordsByNumber.rows[0]?.id ?? recordsByEmail.rows[0]?.id, recordsByEmail.rows[0]?.id ?? recordsByNumber.rows[0]?.id),
+                    "secondary"
+                ]
+            );
 
-                if (row[0] != resObj.contact.primaryContactId && row[4] == "primary") {
+            if (reqInput.email != "") resObj.contact.emails.push(reqInput.email);
+            if (reqInput.phone != "") resObj.contact.phoneNumbers.push(reqInput.phone);
+        }
+
+        recordsByEmail.rows.forEach(row => {
+            if (row.deletedat == null) {
+                if (row.id != resObj.contact.primaryContactId && row.linkprecedence == "primary") {
                     execute(
-                        "UPDATE Contact SET linkedPrecedence=\"secondary\", linkedId=? WHERE Id=?",
+                        "UPDATE Contact SET linkprecedence='secondary', linkedId=$1 WHERE Id=$2",
                         [
                             resObj.contact.primaryContactId,
-                            row[0]
+                            row.id
                         ]
                     );
                 }
-
-                if (row[0] != resObj.contact.primaryContactId) resObj.contact.secondaryContactIds.push(row[0]);
-                if (row[1]! in resObj.contact.phoneNumbers && row[1] != null) resObj.contact.phoneNumbers.push(row[1]);
-                if (row[2]! in resObj.contact.emails && row[2] != null) resObj.contact.emails.push(row[2]);
             }
+        });
 
+        recordsByNumber.rows.forEach(row => {
+            if (row.deletedat == null) {
+                if (row.id != resObj.contact.primaryContactId && row.linkprecedence == "primary") {
+                    execute(
+                        "UPDATE Contact SET linkprecedence='secondary', linkedId=$1 WHERE Id=$2",
+                        [
+                            resObj.contact.primaryContactId,
+                            row.id
+                        ]
+                    );
+                }
+            }
+        });
+
+        records = await execute("SELECT id, email, phoneNumber FROM Contact WHERE linkedId=$1 OR Id=$1", [resObj.contact.primaryContactId])
+
+        records.rows.forEach(row => {
+            if (row.id != resObj.contact.primaryContactId)
+                resObj.contact.secondaryContactIds.push(row.id);
+            if (row.phonenumber != null && !resObj.contact.phoneNumbers.includes(row.phonenumber))
+                resObj.contact.phoneNumbers.push(row.phonenumber);
+            if (row.email != null && !resObj.contact.emails.includes(row.email))
+                resObj.contact.emails.push(row.email);
         });
 
         return resObj;

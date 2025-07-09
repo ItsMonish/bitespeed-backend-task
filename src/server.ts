@@ -13,7 +13,6 @@ class ApiServer {
 
     addRoutes() {
         this.app.get("/", (_: Request, res: Response) => {
-            console.log("[ii] Hit endpoint / redirecting to /identity");
             res.redirect("/identity");
         })
 

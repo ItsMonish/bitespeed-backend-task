@@ -13,8 +13,8 @@ INSERT INTO Contact (phoneNumber, email, linkedId, linkPrecedence)
 VALUES 
     ('123456789', 'person1@example.com', NULL, 'primary'),
     ('987654321', 'person2@example.com', NULL, 'primary'),
-    ('521478963', 'person2@example.com', NULL, 'secondary'),
-    ('123456789', 'person3@example.com', NULL, 'secondary'),
+    ('521478963', 'person2@example.com', 2, 'secondary'),
+    ('123456789', 'person3@example.com', 1, 'secondary'),
     ('369852147', 'person4@example.com', NULL, 'primary');
 
 CREATE OR REPLACE FUNCTION createdTriggerFunction() 
