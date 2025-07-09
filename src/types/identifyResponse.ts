@@ -3,10 +3,10 @@ type identifyResponse = {
 };
 
 type responseContact = {
-    primaryContactId: Number,
+    primaryContactId: number,
     emails: string[],
     phoneNumbers: string[],
-    secondaryContactIds: Number[] 
+    secondaryContactIds: number[] 
 };
 
 export default identifyResponse;
