@@ -97,7 +97,10 @@ async function identifyUser(reqInput: identifyInput): Promise<identifyResponse> 
             }
         });
 
-        records = await execute("SELECT id, email, phoneNumber FROM Contact WHERE linkedId=$1 OR Id=$1", [resObj.contact.primaryContactId])
+        records = await execute(
+            "SELECT id, email, phoneNumber FROM Contact WHERE (linkedId=$1 OR Id=$1) AND deletedat IS NOT NULL",
+            [resObj.contact.primaryContactId]
+        );
 
         records.rows.forEach(row => {
             if (row.id != resObj.contact.primaryContactId)
