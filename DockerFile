@@ -1,0 +1,11 @@
+FROM node:current-alpine3.22
+
+RUN mkdir /usr/app
+WORKDIR /usr/app
+COPY ./package.json /usr/app/
+RUN npm install
+COPY . .
+RUN npx tsc
+
+EXPOSE 8081
+CMD [ "node", "dist/index.js" ]
