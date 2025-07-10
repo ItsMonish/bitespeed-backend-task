@@ -4,3 +4,7 @@ This repository contains code files for the bitespeed backend task provided [her
 Built with Typescript and express with Node runtime. Uses PostgreSQL.
 
 There is no frontend, use curl / postman or something similar.
+
+# Instructions to setup:
+Use the docker-compose command below in the project root:
+`docker-compose up --build`
